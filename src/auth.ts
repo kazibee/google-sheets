@@ -1,23 +1,13 @@
 import { google } from 'googleapis';
 
-/**
- * Creates an authenticated OAuth2 client using credentials from process.env.
- * The sandbox worker injects CLIENT_ID, CLIENT_SECRET, and REFRESH_TOKEN
- * into process.env before loading the tool module.
- */
-export function createAuthClient() {
-  const clientId = process.env.CLIENT_ID;
-  const clientSecret = process.env.CLIENT_SECRET;
-  const refreshToken = process.env.REFRESH_TOKEN;
+export interface Env {
+  CLIENT_ID: string;
+  CLIENT_SECRET: string;
+  REFRESH_TOKEN: string;
+}
 
-  if (!clientId || !clientSecret || !refreshToken) {
-    throw new Error(
-      'Missing required credentials. Set CLIENT_ID, CLIENT_SECRET, and REFRESH_TOKEN via workerbee tool env.',
-    );
-  }
-
-  const auth = new google.auth.OAuth2(clientId, clientSecret);
-  auth.setCredentials({ refresh_token: refreshToken });
-
+export function createAuthClient(env: Env) {
+  const auth = new google.auth.OAuth2(env.CLIENT_ID, env.CLIENT_SECRET);
+  auth.setCredentials({ refresh_token: env.REFRESH_TOKEN });
   return auth;
 }
