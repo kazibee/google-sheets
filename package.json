@@ -1,0 +1,10 @@
+{
+  "name": "@workerbee/google-sheets",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "command": "./src/command.ts",
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  }
+}
