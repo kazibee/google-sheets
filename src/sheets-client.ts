@@ -1,10 +1,10 @@
-import { google, type Auth } from 'googleapis';
-import type { sheets_v4 } from 'googleapis';
+import { sheets as createSheets, type sheets_v4 } from '@googleapis/sheets';
+import type { OAuth2Client } from 'google-auth-library';
 
 type SheetsAPI = sheets_v4.Sheets;
 
-export function createSheetsClient(auth: Auth.OAuth2Client) {
-  const sheets = google.sheets({ version: 'v4', auth });
+export function createSheetsClient(auth: OAuth2Client) {
+  const sheets = createSheets({ version: 'v4', auth });
 
   return {
     createSpreadsheet: (title: string) => createSpreadsheet(sheets, title),

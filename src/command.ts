@@ -1,4 +1,4 @@
-import { google } from 'googleapis';
+import { auth as googleAuth } from '@googleapis/sheets';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
@@ -26,7 +26,7 @@ export interface LoginResult {
  * 5. Returns the credentials for storage via kazibee tool env
  */
 export async function login(): Promise<LoginResult> {
-  const oauth2 = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+  const oauth2 = new googleAuth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
 
   const authUrl = oauth2.generateAuthUrl({
     access_type: 'offline',
