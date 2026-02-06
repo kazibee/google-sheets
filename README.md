@@ -8,6 +8,12 @@ Google Sheets tool for kazibee. Read, write, and manage spreadsheets from the sa
 kazibee install google-sheets github:kazibee/google-sheets
 ```
 
+Or pin to a specific commit:
+
+```bash
+kazibee install google-sheets github:kazibee/google-sheets#COMMIT_SHA
+```
+
 ## Login
 
 ```bash
