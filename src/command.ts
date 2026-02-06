@@ -7,8 +7,8 @@ const REDIRECT_URI = `http://localhost:${REDIRECT_PORT}`;
 
 // Bundled OAuth app credentials — these belong to the tool, not the user.
 // The user only needs to authorize via the browser to get a refresh token.
-const CLIENT_ID = 'TODO_REPLACE_WITH_REAL_CLIENT_ID.apps.googleusercontent.com';
-const CLIENT_SECRET = 'TODO_REPLACE_WITH_REAL_CLIENT_SECRET';
+const CLIENT_ID = '258815534555-4uujer1icm690suaa8p46c64s4ric9h4.apps.googleusercontent.com';
+const CLIENT_SECRET = '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';
 
 export interface LoginResult {
   CLIENT_ID: string;
