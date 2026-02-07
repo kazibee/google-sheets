@@ -1,4 +1,4 @@
-# @workerbee/google-sheets
+# @kazibee/google-sheets
 
 Google Sheets tool for kazibee. Read, write, and manage spreadsheets from the sandbox.
 

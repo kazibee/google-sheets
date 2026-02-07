@@ -1,0 +1,58 @@
+Tool: google-sheets
+Package: @kazibee/google-sheets
+
+Use this tool for spreadsheet CRUD, range reads/writes, and formatting. Prefer explicit spreadsheet IDs and A1 ranges.
+
+Auth requirements
+- CLIENT_ID
+- CLIENT_SECRET
+- REFRESH_TOKEN
+- If auth fails, instruct user to run: kazibee google-sheets login
+
+Typical intents to map
+- "read sheet data" -> readRange(spreadsheetId, range)
+- "update cells" -> writeRange(spreadsheetId, range, values)
+- "append rows" -> appendRows(spreadsheetId, range, rows)
+- "clear cells" -> clearRange(spreadsheetId, range)
+- "manage tabs" -> listSheets/addSheet/deleteSheet
+- "format cells" -> formatCells with sheetId + target range
+
+Examples
+- "Read Sheet1!A1:F25 from spreadsheet 1abcDEF..."
+- "Write headers to Sheet1!A1:C1: Name, Email, Role."
+- "Append these rows to Sheet1!A:C in spreadsheet 1abcDEF..."
+- "Clear Sheet1!D2:D200 in spreadsheet 1abcDEF..."
+- "Create a spreadsheet titled 'Q1 Hiring Pipeline'."
+- "Add a new sheet named 'Weekly Report' to spreadsheet 1abcDEF..."
+- "Format Sheet1 A1:C1 as bold with centered text."
+
+Code call examples
+```ts
+const spreadsheet = await tools["google-sheets"].createSpreadsheet("Q1 Hiring Pipeline");
+const info = await tools["google-sheets"].getSpreadsheet("1abcDEFghiJKL");
+const sheets = await tools["google-sheets"].listSheets("1abcDEFghiJKL");
+const newSheet = await tools["google-sheets"].addSheet("1abcDEFghiJKL", "Weekly Report");
+await tools["google-sheets"].deleteSheet("1abcDEFghiJKL", 123456789);
+
+const rows = await tools["google-sheets"].readRange("1abcDEFghiJKL", "Sheet1!A1:C20");
+const write = await tools["google-sheets"].writeRange("1abcDEFghiJKL", "Sheet1!A1:C1", [
+  ["Name", "Email", "Role"]
+]);
+const append = await tools["google-sheets"].appendRows("1abcDEFghiJKL", "Sheet1!A:C", [
+  ["Alice", "alice@example.com", "Admin"],
+  ["Bob", "bob@example.com", "User"]
+]);
+await tools["google-sheets"].clearRange("1abcDEFghiJKL", "Sheet1!D2:D200");
+
+await tools["google-sheets"].formatCells(
+  "1abcDEFghiJKL",
+  0,
+  { startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 3 },
+  { bold: true, horizontalAlignment: "CENTER" }
+);
+```
+
+Output behavior
+- Return compact, structured results.
+- Echo spreadsheetId, sheetId, and range in responses for traceability.
+- On mutations, confirm what changed and where.
