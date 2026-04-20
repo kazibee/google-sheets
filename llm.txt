@@ -1,7 +1,14 @@
 Tool: google-sheets
 Package: @kazibee/google-sheets
 
-Use this tool for spreadsheet CRUD, range reads/writes, and formatting. Prefer explicit spreadsheet IDs and A1 ranges.
+Use this tool for spreadsheet CRUD, range reads/writes, formatting, charts, conditional formatting, data validation, pivot tables, sorting, merging, filters, structure/layout management, and collaboration features. Prefer explicit spreadsheet IDs and A1 ranges.
+
+IMPORTANT: Rate limit rules
+- Google Sheets enforces strict write-rate quotas (~60 requests/minute per user).
+- NEVER call write/format operations one row at a time. This WILL cause quota errors.
+- ALL writes, clears, formatting, and structural mutations MUST go through the batch builder.
+- Collect all mutations into a single batch(spreadsheetId)...send() call.
+- Use the widest possible ranges (e.g. "Sheet1!A1:C100" not row-by-row).
 
 Auth requirements
 - CLIENT_ID
@@ -11,45 +18,306 @@ Auth requirements
 
 Typical intents to map
 - "read sheet data" -> readRange(spreadsheetId, range)
-- "update cells" -> writeRange(spreadsheetId, range, values)
+- "read multiple ranges" -> readRanges(spreadsheetId, ranges)
+- "update cells" -> batch(id).writeRange(range, values).send()
 - "append rows" -> appendRows(spreadsheetId, range, rows)
-- "clear cells" -> clearRange(spreadsheetId, range)
-- "manage tabs" -> listSheets/addSheet/deleteSheet
-- "format cells" -> formatCells with sheetId + target range
+- "clear cells" -> batch(id).clearRange(range).send()
+- "manage tabs" -> listSheets / addSheet / deleteSheet
+- "format cells" -> batch(id).formatCells(sheetId, range, format).send()
+- "write + format" -> batch(id).writeRange(...).formatCells(...).send()
+- "sort data" -> batch(id).sortRange(sheetId, range, sortSpecs).send()
+- "create chart" -> batch(id).addChart(sheetId, chartConfig).send()
+- "conditional formatting" -> batch(id).addConditionalFormat(sheetId, rule).send()
+- "merge cells" -> batch(id).mergeCells(sheetId, range).send()
+- "unmerge cells" -> batch(id).unmergeCells(sheetId, range).send()
+- "add filter" -> batch(id).setBasicFilter(sheetId, range).send()
+- "remove filter" -> batch(id).removeBasicFilter(sheetId).send()
+- "resize columns/rows" -> batch(id).resizeDimension(sheetId, dim, start, end, px).send()
+- "validate data" -> batch(id).setDataValidation(sheetId, range, rule).send()
+- "remove validation" -> batch(id).removeDataValidation(sheetId, range).send()
+- "create pivot table" -> batch(id).addPivotTable(sheetId, config).send()
+- "find and replace" -> batch(id).findReplace(sheetId, config).send()
+- "named ranges" -> addNamedRange / deleteNamedRange / listNamedRanges
+- "freeze rows/columns" -> batch(id).freezeDimensions(sheetId, rows?, cols?).send()
+- "group rows/columns" -> batch(id).groupDimension(sheetId, dim, start, end).send()
+- "ungroup rows/columns" -> batch(id).ungroupDimension(sheetId, dim, start, end).send()
+- "collapse/expand group" -> batch(id).collapseGroup(sheetId, dim, start, end, collapsed).send()
+- "hide sheet" -> batch(id).hideSheet(sheetId).send()
+- "unhide sheet" -> batch(id).unhideSheet(sheetId).send()
+- "duplicate sheet" -> batch(id).duplicateSheet(sheetId, newName?, index?).send()
+- "auto-resize" -> batch(id).autoResizeDimension(sheetId, dim, start, end).send()
+- "move rows/columns" -> batch(id).moveDimension(sheetId, dim, srcStart, srcEnd, dest).send()
+- "set tab color" -> batch(id).setTabColor(sheetId, color).send()
+- "protect range" -> batch(id).protectRange(sheetId, range, desc?, warningOnly?).send()
+- "remove protection" -> batch(id).removeProtection(protectedRangeId).send()
+- "add note" -> batch(id).setNote(sheetId, row, col, note).send()
+- "clear note" -> batch(id).clearNote(sheetId, row, col).send()
+- "add multiple notes" -> batch(id).setNotes(sheetId, notes).send()
+- "add hyperlink" -> batch(id).setHyperlink(sheetId, row, col, url, label?).send()
+- "insert image" -> batch(id).insertImage(sheetId, row, col, imageUrl).send()
+- "developer metadata" -> batch(id).addDeveloperMetadata(sheetId, key, value, loc, idx?).send()
+- "delete metadata" -> batch(id).deleteDeveloperMetadata(metadataId).send()
 
-Examples
-- "Read Sheet1!A1:F25 from spreadsheet 1abcDEF..."
-- "Write headers to Sheet1!A1:C1: Name, Email, Role."
-- "Append these rows to Sheet1!A:C in spreadsheet 1abcDEF..."
-- "Clear Sheet1!D2:D200 in spreadsheet 1abcDEF..."
-- "Create a spreadsheet titled 'Q1 Hiring Pipeline'."
-- "Add a new sheet named 'Weekly Report' to spreadsheet 1abcDEF..."
-- "Format Sheet1 A1:C1 as bold with centered text."
+API surface
+
+Direct methods (reads & metadata -- no batching needed):
+- createSpreadsheet(title) -> SpreadsheetInfo
+- getSpreadsheet(spreadsheetId) -> SpreadsheetInfo
+- listSheets(spreadsheetId) -> SheetInfo[]
+- addSheet(spreadsheetId, title) -> SheetInfo
+- deleteSheet(spreadsheetId, sheetId) -> void
+- readRange(spreadsheetId, range) -> string[][]
+- readRanges(spreadsheetId, ranges: string[]) -> RangeValues[]
+- appendRows(spreadsheetId, range, rows) -> { updatedCells }
+- addNamedRange(spreadsheetId, name, sheetId, range: CellRange) -> NamedRange
+- deleteNamedRange(spreadsheetId, namedRangeId) -> void
+- listNamedRanges(spreadsheetId) -> NamedRange[]
+
+Batch builder (ALL writes, clears, formatting, structural mutations):
+- batch(spreadsheetId) -> BatchBuilder
+  .writeRange(range, values) -> BatchBuilder
+  .clearRange(range) -> BatchBuilder
+  .formatCells(sheetId, range: CellRange, format: CellFormat) -> BatchBuilder
+  .sortRange(sheetId, range: CellRange, sortSpecs: SortSpec[]) -> BatchBuilder
+  .addChart(sheetId, chartConfig: ChartConfig) -> BatchBuilder
+  .addConditionalFormat(sheetId, rule: ConditionalFormatRule) -> BatchBuilder
+  .mergeCells(sheetId, range: CellRange, mergeType?: MergeType) -> BatchBuilder
+  .unmergeCells(sheetId, range: CellRange) -> BatchBuilder
+  .setBasicFilter(sheetId, range: CellRange) -> BatchBuilder
+  .removeBasicFilter(sheetId) -> BatchBuilder
+  .resizeDimension(sheetId, dimension, startIndex, endIndex, pixelSize) -> BatchBuilder
+  .setDataValidation(sheetId, range: CellRange, rule: DataValidationRule) -> BatchBuilder
+  .removeDataValidation(sheetId, range: CellRange) -> BatchBuilder
+  .addPivotTable(sheetId, config: PivotTableConfig) -> BatchBuilder
+  .findReplace(sheetId, config: FindReplaceConfig) -> BatchBuilder
+  .freezeDimensions(sheetId, frozenRowCount?, frozenColumnCount?) -> BatchBuilder
+  .groupDimension(sheetId, dimension: DimensionType, startIndex, endIndex) -> BatchBuilder
+  .ungroupDimension(sheetId, dimension: DimensionType, startIndex, endIndex) -> BatchBuilder
+  .collapseGroup(sheetId, dimension: DimensionType, startIndex, endIndex, collapsed) -> BatchBuilder
+  .hideSheet(sheetId) -> BatchBuilder
+  .unhideSheet(sheetId) -> BatchBuilder
+  .duplicateSheet(sheetId, newName?, insertAtIndex?) -> BatchBuilder
+  .autoResizeDimension(sheetId, dimension: DimensionType, startIndex, endIndex) -> BatchBuilder
+  .moveDimension(sheetId, dimension: DimensionType, srcStart, srcEnd, destinationIndex) -> BatchBuilder
+  .setTabColor(sheetId, color: RGBColor) -> BatchBuilder
+  .protectRange(sheetId, range: CellRange, description?, warningOnly?) -> BatchBuilder
+  .removeProtection(protectedRangeId) -> BatchBuilder
+  .setNote(sheetId, row, col, note) -> BatchBuilder
+  .clearNote(sheetId, row, col) -> BatchBuilder
+  .setNotes(sheetId, notes: CellNote[]) -> BatchBuilder
+  .setHyperlink(sheetId, row, col, url, label?) -> BatchBuilder
+  .insertImage(sheetId, row, col, imageUrl) -> BatchBuilder
+  .addDeveloperMetadata(sheetId, key, value, location: MetadataLocationType, locationIndex?) -> BatchBuilder
+  .deleteDeveloperMetadata(metadataId) -> BatchBuilder
+  .send() -> Promise<BatchResult>
+
+Types
+
+CellRange: { startRowIndex, endRowIndex, startColumnIndex, endColumnIndex } (all zero-based)
+RGBColor: { red?, green?, blue? } (values 0-1)
+NumberFormat: { type: NumberFormatType, pattern?: string }
+NumberFormatType: 'TEXT' | 'NUMBER' | 'PERCENT' | 'CURRENCY' | 'DATE' | 'TIME' | 'SCIENTIFIC'
+BorderStyle: { style: BorderStyleType, color?: RGBColor }
+BorderStyleType: 'SOLID' | 'DASHED' | 'DOTTED' | 'SOLID_MEDIUM' | 'SOLID_THICK' | 'DOUBLE'
+Borders: { top?, bottom?, left?, right? } (each BorderStyle)
+CellFormat: { bold?, italic?, fontSize?, foregroundColor?, backgroundColor?, horizontalAlignment?, numberFormat?, borders? }
+SortSpec: { dimensionIndex: number, sortOrder: 'ASCENDING' | 'DESCENDING' }
+ChartType: 'BAR' | 'LINE' | 'PIE' | 'COLUMN' | 'AREA' | 'SCATTER'
+ChartOverlayPosition: { anchorCell: { sheetId, rowIndex, columnIndex }, offsetXPixels?, offsetYPixels?, widthPixels?, heightPixels? }
+ChartSourceRange: { sheetId, range: CellRange }
+ChartConfig: { chartType: ChartType, title?, sourceRanges: ChartSourceRange[], position: ChartOverlayPosition }
+ConditionType: 'NUMBER_GREATER' | 'NUMBER_LESS' | 'TEXT_CONTAINS' | 'CUSTOM_FORMULA' | ... (see types)
+BooleanCondition: { type: ConditionType, values?: { userEnteredValue?, relativeDate? }[] }
+BooleanRule: { condition: BooleanCondition, format: CellFormat }
+InterpolationPoint: { color: RGBColor, type: 'MIN'|'MAX'|'NUMBER'|'PERCENT'|'PERCENTILE', value? }
+GradientRule: { minpoint, midpoint?, maxpoint } (each InterpolationPoint)
+ConditionalFormatRule: { ranges: CellRange[], booleanRule?, gradientRule? }
+MergeType: 'MERGE_ALL' | 'MERGE_COLUMNS' | 'MERGE_ROWS'
+DataValidationType: 'ONE_OF_LIST' | 'ONE_OF_RANGE' | 'NUMBER_BETWEEN' | 'NUMBER_GREATER' | 'NUMBER_LESS' | 'BOOLEAN' | 'CUSTOM_FORMULA'
+DataValidationRule: { type, values?, formula?, min?, max?, strict?, showCustomUi? }
+PivotGroup: { sourceColumnOffset, sortOrder? }
+PivotValue: { sourceColumnOffset, summarizeFunction: 'SUM'|'COUNT'|'AVERAGE'|'MAX'|'MIN'|'CUSTOM' }
+PivotTableConfig: { sourceRange: { sheetId, range }, rows, columns, values, anchorCell: { sheetId, rowIndex, columnIndex } }
+FindReplaceConfig: { find, replacement, matchCase?, matchEntireCell?, searchByRegex?, allSheets? }
+NamedRange: { namedRangeId, name, sheetId, range: CellRange }
+RangeValues: { range: string, values: string[][] }
+DimensionType: 'ROWS' | 'COLUMNS'
+MetadataLocationType: 'SHEET' | 'ROW' | 'COLUMN'
+CellNote: { row, col, note }
+SpreadsheetInfo: { spreadsheetId, title, url, sheets: SheetInfo[] }
+SheetInfo: { sheetId, title, index, rowCount, columnCount }
+FormatOperation: { sheetId, range: CellRange, format: CellFormat }
+BatchResult: { writtenCells, clearedRanges, formatOperations }
 
 Code call examples
+
 ```ts
+// Read (direct)
+const rows = await tools["google-sheets"].readRange("1abcDEFghiJKL", "Sheet1!A1:C20");
+
+// Read multiple ranges (direct)
+const results = await tools["google-sheets"].readRanges("1abcDEFghiJKL", [
+  "Sheet1!A1:C10",
+  "Sheet2!A1:B5"
+]);
+
+// Append (direct -- single atomic operation)
+await tools["google-sheets"].appendRows("1abcDEFghiJKL", "Sheet1!A:C", [
+  ["Alice", "alice@example.com", "Admin"],
+  ["Bob", "bob@example.com", "User"]
+]);
+
+// Write + clear + format in ONE batch (best practice)
+const result = await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .writeRange("Sheet1!A1:C1", [["Name", "Email", "Role"]])
+  .writeRange("Sheet1!A2:C3", [
+    ["Alice", "alice@example.com", "Admin"],
+    ["Bob", "bob@example.com", "User"]
+  ])
+  .formatCells(0,
+    { startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 3 },
+    { bold: true, horizontalAlignment: "CENTER", backgroundColor: { red: 0.9, green: 0.9, blue: 0.9 } }
+  )
+  .clearRange("Sheet1!D1:Z1000")
+  .send();
+
+// Metadata
 const spreadsheet = await tools["google-sheets"].createSpreadsheet("Q1 Hiring Pipeline");
 const info = await tools["google-sheets"].getSpreadsheet("1abcDEFghiJKL");
 const sheets = await tools["google-sheets"].listSheets("1abcDEFghiJKL");
 const newSheet = await tools["google-sheets"].addSheet("1abcDEFghiJKL", "Weekly Report");
 await tools["google-sheets"].deleteSheet("1abcDEFghiJKL", 123456789);
 
-const rows = await tools["google-sheets"].readRange("1abcDEFghiJKL", "Sheet1!A1:C20");
-const write = await tools["google-sheets"].writeRange("1abcDEFghiJKL", "Sheet1!A1:C1", [
-  ["Name", "Email", "Role"]
-]);
-const append = await tools["google-sheets"].appendRows("1abcDEFghiJKL", "Sheet1!A:C", [
-  ["Alice", "alice@example.com", "Admin"],
-  ["Bob", "bob@example.com", "User"]
-]);
-await tools["google-sheets"].clearRange("1abcDEFghiJKL", "Sheet1!D2:D200");
+// Sort a range by column A ascending, then column B descending
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .sortRange(0,
+    { startRowIndex: 1, endRowIndex: 100, startColumnIndex: 0, endColumnIndex: 3 },
+    [
+      { dimensionIndex: 0, sortOrder: "ASCENDING" },
+      { dimensionIndex: 1, sortOrder: "DESCENDING" }
+    ]
+  )
+  .send();
 
-await tools["google-sheets"].formatCells(
-  "1abcDEFghiJKL",
-  0,
-  { startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 3 },
-  { bold: true, horizontalAlignment: "CENTER" }
+// Create a bar chart from data in A1:B10
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .addChart(0, {
+    chartType: "BAR",
+    title: "Sales by Region",
+    sourceRanges: [{
+      sheetId: 0,
+      range: { startRowIndex: 0, endRowIndex: 10, startColumnIndex: 0, endColumnIndex: 2 }
+    }],
+    position: {
+      anchorCell: { sheetId: 0, rowIndex: 0, columnIndex: 4 },
+      widthPixels: 600,
+      heightPixels: 400
+    }
+  })
+  .send();
+
+// Conditional formatting: highlight cells > 100 in red
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .addConditionalFormat(0, {
+    ranges: [{ startRowIndex: 1, endRowIndex: 50, startColumnIndex: 2, endColumnIndex: 3 }],
+    booleanRule: {
+      condition: { type: "NUMBER_GREATER", values: [{ userEnteredValue: "100" }] },
+      format: { backgroundColor: { red: 1, green: 0.8, blue: 0.8 } }
+    }
+  })
+  .send();
+
+// Merge cells and unmerge
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .mergeCells(0, { startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 3 })
+  .send();
+
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .unmergeCells(0, { startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 3 })
+  .send();
+
+// Data validation: dropdown list
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .setDataValidation(0,
+    { startRowIndex: 1, endRowIndex: 100, startColumnIndex: 1, endColumnIndex: 2 },
+    { type: "ONE_OF_LIST", values: ["Active", "Inactive", "Pending"], showCustomUi: true }
+  )
+  .send();
+
+// Pivot table
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .addPivotTable(0, {
+    sourceRange: {
+      sheetId: 0,
+      range: { startRowIndex: 0, endRowIndex: 100, startColumnIndex: 0, endColumnIndex: 5 }
+    },
+    rows: [{ sourceColumnOffset: 0 }],
+    columns: [{ sourceColumnOffset: 1 }],
+    values: [{ sourceColumnOffset: 4, summarizeFunction: "SUM" }],
+    anchorCell: { sheetId: 1, rowIndex: 0, columnIndex: 0 }
+  })
+  .send();
+
+// Freeze the first row and first column
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .freezeDimensions(0, 1, 1)
+  .send();
+
+// Group rows 2-10, then collapse them
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .groupDimension(0, "ROWS", 1, 10)
+  .send();
+
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .collapseGroup(0, "ROWS", 1, 10, true)
+  .send();
+
+// Protected range (warning only)
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .protectRange(0,
+    { startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 10 },
+    "Header row - do not edit",
+    true
+  )
+  .send();
+
+// Set notes on cells
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .setNote(0, 0, 0, "This is the header row")
+  .setNotes(0, [
+    { row: 1, col: 0, note: "First data entry" },
+    { row: 2, col: 0, note: "Second data entry" }
+  ])
+  .send();
+
+// Named ranges
+const nr = await tools["google-sheets"].addNamedRange("1abcDEFghiJKL", "HeaderRow", 0,
+  { startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 5 }
 );
+const allNamed = await tools["google-sheets"].listNamedRanges("1abcDEFghiJKL");
+await tools["google-sheets"].deleteNamedRange("1abcDEFghiJKL", nr.namedRangeId);
+
+// Find and replace across all sheets
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .findReplace(0, { find: "old value", replacement: "new value", allSheets: true })
+  .send();
+
+// Hyperlinks and images
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .setHyperlink(0, 0, 3, "https://example.com", "Visit site")
+  .insertImage(0, 0, 4, "https://example.com/logo.png")
+  .send();
+
+// Duplicate a sheet and set tab color
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .duplicateSheet(0, "Sheet1 Copy", 1)
+  .setTabColor(0, { red: 0.2, green: 0.6, blue: 1 })
+  .send();
+
+// Auto-resize columns to fit content
+await tools["google-sheets"].batch("1abcDEFghiJKL")
+  .autoResizeDimension(0, "COLUMNS", 0, 5)
+  .send();
 ```
 
 Output behavior

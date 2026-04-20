@@ -4,6 +4,9 @@
   "type": "module",
   "main": "./src/index.ts",
   "command": "./src/command.ts",
+  "kazibee": {
+    "description": "Google Sheets API client with read/write operations, formatting, and batch support"
+  },
   "dependencies": {
     "@googleapis/sheets": "^13.0.1"
   },
