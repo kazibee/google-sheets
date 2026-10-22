@@ -6,7 +6,7 @@ export interface Env {
   CLIENT_ID: string;
   /** Google OAuth2 client secret. */
   CLIENT_SECRET: string;
-  /** Long-lived refresh token obtained during `kazibee google-sheets login`. */
+  /** Long-lived refresh token obtained by the extension's `login` command. */
   REFRESH_TOKEN: string;
 }
 

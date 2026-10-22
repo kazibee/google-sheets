@@ -5,7 +5,12 @@
   "main": "./src/index.ts",
   "command": "./src/command.ts",
   "kazibee": {
-    "description": "Google Sheets API client with read/write operations, formatting, and batch support"
+    "description": "Google Sheets API client with read/write operations, formatting, and batch support",
+    "commands": {
+      "login": {
+        "description": "Run the OAuth2 browser login flow to obtain and store Google credentials"
+      }
+    }
   },
   "dependencies": {
     "@googleapis/sheets": "^13.0.1"

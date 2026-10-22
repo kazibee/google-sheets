@@ -14,7 +14,7 @@ Auth requirements
 - CLIENT_ID
 - CLIENT_SECRET
 - REFRESH_TOKEN
-- If auth fails, instruct user to run: kazibee google-sheets login
+- If auth fails, ask the user to run the login command in Settings → Tools → google-sheets → Commands.
 
 Typical intents to map
 - "read sheet data" -> readRange(spreadsheetId, range)
